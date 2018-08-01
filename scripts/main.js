@@ -49,6 +49,7 @@ class Paragraphs {
 
     AddParagraph() {
         this.paragraphs[this.paragraphsCounter] = new Paragraph();
+        this.paragraphsCounter++;
     }
 
     RemoveParagraph(index) {
@@ -182,6 +183,26 @@ function OnAddNewVariant() {
 
     $('.Table').show(150);
     $('.WantTable').show(150);
+
+    let $toModify = $('.Paragraph').find('.VariantRow').find('ul');
+
+    $.each($toModify, (index, item) => {
+        let $select = $(item).children().last();
+        let $options = $select.find('option');
+
+        $.each($options, (index, item) => {
+
+            if (index > 1) {
+                $(item).remove();
+            }
+        });
+
+        $.each(dataObj.variantsData.variants, (index, item) => {
+            let $newOption = $(`<option value="${item.sku}">${item.model}</option>`)
+                .on('click',OnAddVariantToParagraph);
+            $select.append($newOption);
+        }); 
+    });
 }
 
 function OnRemoveVariant() {
@@ -283,15 +304,24 @@ function OnAddVariantToParagraph() {
             isInTheList = index;
         }
     })
-    
-    if (isInTheList > -1)
-    {
+
+    if (isInTheList > -1) {
         return;
     }
-    
+
     let $newLi = $(`<li class="${sku}">${model}</li>`);
     let $newCross = $('<span>x</span>');
     $newLi.append($newCross).hide();
     $selectEl.before($newLi);
     $newLi.show(150);
+
+    $p = $selectEl.parents('.Paragraph');
+    let classes = $p.attr('class').split(' ');
+    let result = classes.find((item) => /lb-/.test(item));
+    let index = ExtractId(result, 'lb-p-');
+    console.log(index);
+    console.log(dataObj);
+
+
+
 }
