@@ -53,14 +53,17 @@ class Paragraphs {
     }
 
     RemoveParagraph(index) {
-        this.paragraphs.splice(index, 1);
+        if (this.paragraphsCounter >= 0) {
+            this.paragraphsCounter--;
+            this.paragraphs.splice(index, 1);
+        }
     }
 }
 
 class Paragraph {
     constructor() {
         this.skus = ['all'];
-        this.paragraphData = '';
+        this.Data = '';
     }
 
     AddSku(newSku) {
@@ -231,12 +234,14 @@ function OnRemoveVariant() {
 function OnAddNewParagraph() {
 
     let $newTa = $('<textarea></textarea>')
-        .attr('class', 'Field');
+        .attr('class', 'Field')
+        .on('input', OnParagraphInput);
 
     let $newDb = $('<input>')
         .attr('class', 'Delete')
         .attr('type', 'button')
-        .attr('value', 'usuń');
+        .attr('value', 'usuń')
+        .on('click', OnRemoveParagraph);
     //.on('click',OnDeleteParagraph);
 
     let $newDR = $('<div></div>')
@@ -253,7 +258,8 @@ function OnAddNewParagraph() {
         $newLi.append($newCross);
         $newUl.append($newLi);
 
-        $newSel = $('<select></select>');
+        $newSel = $('<select></select>')
+            .addClass('selectOne');
         $newSel.append($('<option></option>')
             .val('none')
             .text('dodaj nowy model')
@@ -277,6 +283,7 @@ function OnAddNewParagraph() {
     let $newP = $('<div></div>')
         .addClass('Paragraph')
         .addClass(`lb-p-${dataObj.paragraphData.paragraphsCounter}`);
+
     $newDR.append($newTa).append('\n').append($newDb);
     $newP.append($newVR).append('\n').append($newDR);
 
@@ -286,6 +293,29 @@ function OnAddNewParagraph() {
 
     dataObj.paragraphData.AddParagraph();
     dataObj.hasParagrapshs = true;
+}
+
+function OnRemoveParagraph() {
+    $p = $(this).parents('.Paragraph');
+    let classes = $p.attr('class').split(' ');
+    let result = classes.find((item) => /lb-/.test(item));
+    let index = ExtractId(result, 'lb-p-');
+
+    $allP = $p.parent().find('.Paragraph');
+    $toModify = $allP.splice(+index + 1)
+    $p.hide(150, function () {
+        $(this).remove();
+        dataObj.paragraphData.RemoveParagraph(index);
+
+        $.each($toModify, function (id, item) {
+            let classes = $(item).attr('class').split(' ');
+            let result = classes.find((item) => /lb-/.test(item));
+            let index = ExtractId(result, 'lb-p-');
+            $(item).removeClass(`lb-p-${+index}`).addClass(`lb-p-${+index-1}`);
+        });
+
+    })
+
 }
 
 function OnAddVariantToParagraph() {
@@ -344,4 +374,13 @@ function OnDeleteVariantFromParagraph() {
     })
     console.log(dataObj);
 
+}
+
+function OnParagraphInput() {
+    $p = $(this).parents('.Paragraph');
+    let classes = $p.attr('class').split(' ');
+    let result = classes.find((item) => /lb-/.test(item));
+    let index = ExtractId(result, 'lb-p-');
+
+    dataObj.paragraphData.paragraphs[index].Data = $(this).val();
 }
