@@ -260,6 +260,11 @@ body {
   cursor: pointer;
 }
 
+.VariantRow ul li p {
+  margin: 0px;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
 .DataRow {
   display: -webkit-box;
   display: -ms-flexbox;

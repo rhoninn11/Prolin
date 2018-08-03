@@ -199,9 +199,9 @@ function OnAddNewVariant() {
 
         $.each(dataObj.variantsData.variants, (index, item) => {
             let $newOption = $(`<option value="${item.sku}">${item.model}</option>`)
-                .on('click',OnAddVariantToParagraph);
+                .on('click', OnAddVariantToParagraph);
             $select.append($newOption);
-        }); 
+        });
     });
 }
 
@@ -247,8 +247,9 @@ function OnAddNewParagraph() {
     if (dataObj.hasVariants) {
 
         let $newUl = $('<ul></ul>');
-        let $newLi = $('<li class="all">Wszystkie</li>');
-        let $newCross = $('<span>x</span>');
+        let $newLi = $('<li class="all"><p>Wszystkie</p></li>');
+        let $newCross = $('<span>x</span>')
+            .on('click', OnDeleteVariantFromParagraph);
         $newLi.append($newCross);
         $newUl.append($newLi);
 
@@ -309,8 +310,9 @@ function OnAddVariantToParagraph() {
         return;
     }
 
-    let $newLi = $(`<li class="${sku}">${model}</li>`);
-    let $newCross = $('<span>x</span>');
+    let $newLi = $(`<li class="${sku}"><p>${model}</p></li>`);
+    let $newCross = $('<span>x</span>')
+        .on('click', OnDeleteVariantFromParagraph);
     $newLi.append($newCross).hide();
     $selectEl.before($newLi);
     $newLi.show(150);
@@ -320,8 +322,26 @@ function OnAddVariantToParagraph() {
     let result = classes.find((item) => /lb-/.test(item));
     let index = ExtractId(result, 'lb-p-');
     console.log(index);
+    dataObj.paragraphData.paragraphs[index].AddSku(sku);
     console.log(dataObj);
+}
 
+function OnDeleteVariantFromParagraph() {
+    $variant = $(this).parent();
+    let sku = $variant.attr('class');
+    let model = $variant.find('p').text();
 
+    $p = $(this).parents('.Paragraph');
+    let classes = $p.attr('class').split(' ');
+    let result = classes.find((item) => /lb-/.test(item));
+    let index = ExtractId(result, 'lb-p-');
+
+    console.log(`próbujesz usunąć model: ${model} o sku:${sku} z paragrafu o indexie: ${index}`);
+
+    dataObj.paragraphData.paragraphs[index].RemoveSku(sku);
+    $variant.hide(150, function () {
+        $(this).remove();
+    })
+    console.log(dataObj);
 
 }
