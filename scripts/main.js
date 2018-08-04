@@ -213,6 +213,10 @@ function OnRemoveVariant() {
     let className = $parent.attr('class');
     let removedElementId = ExtractId(className, 'lb-list-index-');
 
+    //ukrycie tabeli
+    let model = dataObj.variantsData.variants[removedElementId].model;
+    let sku = dataObj.variantsData.variants[removedElementId].sku;
+
     dataObj.variantsData.RemoveVariant(removedElementId);
     if (dataObj.variantsData.variantsCount < 1) {
         $('.Table').hide(150);
@@ -221,12 +225,54 @@ function OnRemoveVariant() {
     let $mainList = $parent.parent().find('li');
     let $toModify = $mainList.slice(+removedElementId + 1);
 
+    //poprawienie id w klasach następnych wariantów
     $parent.hide(150, function () {
         $(this).remove();
 
         $.each($toModify, function () {
             let id = ExtractId($(this).attr('class'), 'lb-list-index-');
             $(this).attr('class', `lb-list-index-${+id - 1}`);
+        });
+    });
+
+    //usunięcie wariantu z selectów oraz wariantów z paragrafów
+
+    let $allp = $('.Paragraph');
+
+    $.each($allp, function (id, item) {
+        let $variantBlock = $(item).find(`.${sku}`);
+        if ($variantBlock.length > 0) {
+
+            let classes = $(item).attr('class').split(' ');
+            let result = classes.find((classInstance) => /lb-/.test(classInstance));
+            let index = ExtractId(result, 'lb-p-');
+
+            console.log(`usuwamy sku:${sku} z paragrafu o indexie: ${index}`);
+
+            dataObj.paragraphData.paragraphs[index].RemoveSku(sku);
+            $variantBlock.hide(150, function () {
+                $(this).remove()
+            });
+
+        }
+    });
+    $toModify = $('.Paragraph').find('.VariantRow').find('ul');
+
+    $.each($toModify, (index, item) => {
+        let $select = $(item).children().last();
+        let $options = $select.find('option');
+
+        $.each($options, (index, item) => {
+
+            if (index > 1) {
+                $(item).remove();
+            }
+        });
+
+        $.each(dataObj.variantsData.variants, (index, item) => {
+            let $newOption = $(`<option value="${item.sku}">${item.model}</option>`)
+                .on('click', OnAddVariantToParagraph);
+            $select.append($newOption);
         });
     });
 }
