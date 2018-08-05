@@ -12,9 +12,61 @@ class DataObject {
 }
 
 class Table {
-    constructor() {
-
+    constructor(isRegular = true) {
+        if(isRegular){
+            this.titleRow = new TableRow('Parametr',[new TableCell('all','Wartość')]);
+        }
+        else{
+            this.titleRow = new TableRow('Model',[]);
+        }
+        this.rows = []
     }
+
+    AddRow(title =  '', rowData = []){
+        this.rows[this.rows.length] = new TableRow(title,rowData)
+    }
+
+    RemoveRow(index){
+        this.rows.splice(index,1);
+    }
+
+    AddColumn(sku){
+        this.titleRow.rowData[this.titleRow.rowData.length] = sku;
+        for(row in this.rows){
+            row.rowData[row.rowData.length] = '';
+        }
+    }
+
+    RemoveColumn(sku){
+        let id = this.titleRow.rowData.indexOf(sku);
+        this.titleRow.rowData.splice(id,1);
+        for(row in this.rows){
+            row.rowData.splice(id,1);
+        }
+    }
+}
+
+class TableRow{
+    constructor(title = '',rowData = []){
+        this.rowTitle = title;
+        this.rowData = rowData;
+    }
+
+    AddCell(sku = 'all', value =''){
+        this.rowData[this.rowData.length] = new TableCell(sku,value);
+    }
+
+    RemoveCell(index){
+        this.rowData.splice(index,1);
+    }
+}
+
+class TableCell{
+    constructor(sku,value){
+        this.sku = sku;
+        this.value = value;
+    }
+
 }
 
 class Variants {
@@ -94,13 +146,16 @@ function InitApp() {
 function ExtractId(id, prefix) {
     return id.replace(prefix, '')
 }
+
 //#endregion
 
 $(document).ready(function () {
     InitApp();
     $(".SelectType").find('option').on('click', OnProductTypeChanged);
     $('.NewVariantBlock').find('.AddVariantButton').on('click', OnAddNewVariant);
-    $('.New').on('click', OnAddNewParagraph)
+    $('.New').on('click', OnAddNewParagraph);
+    $('.AddParameterTable').on('click', OnAddTable);
+    $('.RemoveParameterTable').on('click', OnRemoveTable);
 })
 
 //#region STATES
@@ -115,6 +170,9 @@ function NoneTypeState() {
 
 function RegularTypeState() {
     InitData();
+
+    dataObj.paragraphData = new Paragraphs();
+
     $('.Variants').hide(150);
     $('.Description').show(150);
     $('.Table').show(150);
@@ -179,6 +237,7 @@ function OnAddNewVariant() {
 
     //dodanie wariantu w modelu
     dataObj.variantsData.AddVariant(model, sku);
+    console.log(`dodano model:${model} o sku:${sku}`);
 
     //czyszczenie modelu i sku
     $variantModel.val('');
@@ -209,36 +268,42 @@ function OnAddNewVariant() {
 }
 
 function OnRemoveVariant() {
-    let $parent = $(this).parent()
+    //dezaktywacja klawisza
+    $(this).disabled = true;
+
+    //pobranie ID
+    let $parent = $(this).parents('li')
     let className = $parent.attr('class');
     let removedElementId = ExtractId(className, 'lb-list-index-');
 
-    //ukrycie tabeli
+    //model i sku usuwanego wariantu
     let model = dataObj.variantsData.variants[removedElementId].model;
     let sku = dataObj.variantsData.variants[removedElementId].sku;
+    console.log(`usuwasz modelu:${model} o sku:${sku}`);
 
+    //zabezpieczenie dla tabeli
     dataObj.variantsData.RemoveVariant(removedElementId);
     if (dataObj.variantsData.variantsCount < 1) {
         $('.Table').hide(150);
         $('.WantTable').hide(150);
     }
+
+    //modyfikowanie id kolejnych wariantów aby zachować ciągłość
     let $mainList = $parent.parent().find('li');
     let $toModify = $mainList.slice(+removedElementId + 1);
+    $.each($toModify, (index, item) => {
 
-    //poprawienie id w klasach następnych wariantów
+        let id = ExtractId($(item).attr('class'), 'lb-list-index-');
+        $(item).attr('class', `lb-list-index-${+id - 1}`);
+    });
+
+    //usunięcie wariantu z listy
     $parent.hide(150, function () {
         $(this).remove();
-
-        $.each($toModify, function () {
-            let id = ExtractId($(this).attr('class'), 'lb-list-index-');
-            $(this).attr('class', `lb-list-index-${+id - 1}`);
-        });
     });
 
     //usunięcie wariantu z selectów oraz wariantów z paragrafów
-
     let $allp = $('.Paragraph');
-
     $.each($allp, function (id, item) {
         let $variantBlock = $(item).find(`.${sku}`);
         if ($variantBlock.length > 0) {
@@ -253,17 +318,15 @@ function OnRemoveVariant() {
             $variantBlock.hide(150, function () {
                 $(this).remove()
             });
-
         }
     });
-    $toModify = $('.Paragraph').find('.VariantRow').find('ul');
 
+    $toModify = $('.Paragraph').find('.VariantRow').find('ul');
     $.each($toModify, (index, item) => {
         let $select = $(item).children().last();
         let $options = $select.find('option');
 
         $.each($options, (index, item) => {
-
             if (index > 1) {
                 $(item).remove();
             }
@@ -327,7 +390,7 @@ function OnAddNewParagraph() {
     }
 
     let $newP = $('<div></div>')
-        .addClass('Paragraph')
+        // .addClass('Paragraph')
         .addClass(`lb-p-${dataObj.paragraphData.paragraphsCounter}`);
 
     $newDR.append($newTa).append('\n').append($newDb);
@@ -339,6 +402,8 @@ function OnAddNewParagraph() {
 
     dataObj.paragraphData.AddParagraph();
     dataObj.hasParagrapshs = true;
+
+    console.log('dodano paragraf');
 }
 
 function OnRemoveParagraph() {
@@ -429,4 +494,56 @@ function OnParagraphInput() {
     let index = ExtractId(result, 'lb-p-');
 
     dataObj.paragraphData.paragraphs[index].Data = $(this).val();
+}
+
+function OnAddTable() {
+    $(this).hide(150);
+
+    dataObj.hasTable = true;
+    if(dataObj.hasVariants){
+        dataObj.tableData = new Table(false);
+    }
+    else{
+        dataObj.tableData = new Table();
+        for(variant in dataObj.variantsData.variants)
+        {
+            dataObj.tableData.titleRow
+        }
+    }
+    $('.RemoveParameterTable').show(150);
+    $('.TableDock').show(150);
+    $('.HaveTable').show(150);
+}
+
+function OnRemoveTable() {
+    $(this).hide(150);
+    $('.AddParameterTable').disabled = true;
+    $('.AddParameterTable').show(150);
+    $('.TableDock').hide(150,function(){
+        dataObj.hasTable = false;
+        dataObj.tableData = new Table(!dataObj.hasVariants)
+        $('.AddParameterTable').disabled = false;
+    });
+    $('.HaveTable').hide(150);
+}
+
+function OnAddTableRow(){
+    let $table = $('.TableDock').find('table');
+    if($table.length == 0)
+    {
+        $table = $('<tabel></table>');
+        if(dataObj.hasVariants){
+            let $newRow = $(`<tr>${dataObj.tableData.titleRow.ti}</tr>`);
+            $newRow.append($(<td><td>'))
+        }
+
+        $('.TableDock').append
+    }
+
+
+}
+
+
+function OnTableInput(){
+
 }
