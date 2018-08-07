@@ -21,8 +21,12 @@ class Table {
         this.rows = []
     }
 
-    AddRow(title = '', rowData = []) {
-        this.rows[this.rows.length] = new TableRow(title, rowData)
+    AddRow(variants = []) {
+        let newRow = new TableRow();
+        for (let i = 0; i < variants.length; i++) {
+            newRow.AddCell(variants[i].sku, '');
+        }
+        this.rows.push(newRow);
     }
 
     RemoveRow(index) {
@@ -269,7 +273,7 @@ function OnAddNewVariant() {
 }
 
 function OnRemoveVariant() {
-    //dezaktywacja klawisza
+    //dezaktywacja przycisku
     $(this).disabled = true;
 
     //pobranie ID
@@ -287,6 +291,59 @@ function OnRemoveVariant() {
     if (dataObj.variantsData.variantsCount < 1) {
         $('.Table').hide(150);
         $('.WantTable').hide(150);
+        if (dataObj.hasTable) {
+            OnRemoveTable();
+        }
+    } else {
+        if (dataObj.hasTable) {
+            //tu będzie usuwanie kolumny z tabeli wraz z wariantem
+            let $toModify = $('.TableDock').find('table').find('tr');
+            let $titleRow = $toModify.first();
+            let ourCell = $.grep($titleRow.find('td'), function (item, index) {
+                let classes = $(item).attr('class').split(' ');
+                let result = classes.find((item) => {
+                    return new RegExp(`${sku}`).test(item);
+                });
+                if (result != undefined) {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+
+            let result = $(ourCell).attr('class').split(' ').find((item) => /lb-/.test(item));
+            let indexToRemove = ExtractId(result, 'lb-col-')
+            console.log(indexToRemove);
+            console.log($toModify);
+            
+            
+            $.each($toModify, (index1, item1) => {
+                console.log(item1);
+                
+                let $cells = $(item1).find('td');
+                let $cellToModify = $cells.splice(+indexToRemove)
+                console.log(indexToRemove);
+                console.log($cells);
+                console.log($cellToModify);
+                
+                $.each($cellToModify, (index2, item2) => {
+                    console.log(item2);
+                    
+                    $(item2).removeClass(`lb-col-${+indexToRemove + index2}`).addClass(`lb-col-${+indexToRemove + index2 - 1}`);
+
+                    if (index2 == 0) {
+                        $(item2).hide(150, function () {
+                            $(this).remove();
+                        });
+                    }
+
+                });
+            });
+        }
+
+
+
+
     }
 
     //modyfikowanie id kolejnych wariantów aby zachować ciągłość
@@ -411,7 +468,7 @@ function OnAddNewParagraph() {
 function OnRemoveParagraph() {
     $p = $(this).parents('.Paragraph');
     console.log($p);
-    
+
     let classes = $p.attr('class').split(' ');
     let result = classes.find((item) => /lb-/.test(item));
     let index = ExtractId(result, 'lb-p-');
@@ -501,30 +558,34 @@ function OnParagraphInput() {
 }
 
 function OnAddTable() {
-    $(this).hide(150);
-
+    $('.AddParameterTable').hide(150);
+    $('.AddParameterTable').disabled = true;
+    $('.RemoveParameterTable').disabled = true;
     dataObj.hasTable = true;
     if (dataObj.hasVariants) {
         dataObj.tableData = new Table(false);
     } else {
         dataObj.tableData = new Table();
-        for (variant in dataObj.variantsData.variants) {
-            dataObj.tableData.titleRow
-        }
     }
     OnAddTableRow();
-    $('.RemoveParameterTable').show(150);
+
+    $('.RemoveParameterTable').show(150, function () {
+        $('.RemoveParameterTable').disabled = false;
+    });
     $('.TableDock').show(300);
     $('.HaveTable').show(150);
 }
 
 function OnRemoveTable() {
-    $(this).hide(150);
+    $('.RemoveParameterTable').hide(150);
+    $('.RemoveParameterTable').disabled = true;
     $('.AddParameterTable').disabled = true;
+
     $('.AddParameterTable').show(150);
     $('.TableDock').hide(150, function () {
+        $(this).find('table').remove();
         dataObj.hasTable = false;
-        dataObj.tableData = new Table(!dataObj.hasVariants)
+        dataObj.tableData = null;
         $('.AddParameterTable').disabled = false;
     });
     $('.HaveTable').hide(150);
@@ -534,57 +595,76 @@ function OnAddTableRow() {
     let $table = $('.TableDock').find('table');
     console.log('elo1');
 
+    //dodawanie widoku tabeli do wrowadzanie i uzupełnianie modelu o potrzebne dane gdy widoku tabeli nie ma
     if ($table.length == 0) {
         $table = $('<table></table>');
         if (dataObj.hasVariants) {
+            //produkt z wariantami
             let $newRow = $(`<tr></tr>`).addClass('lb-row-0');
             let $newCell = $(`<td>${dataObj.tableData.titleRow.Title}</td>`)
                 .addClass('lb-col-0')
+
             $newRow.append($newCell);
-            console.log('elo2');
 
-
+            //przygotowanie komórek dla wszystkich wariantów
             $.each(dataObj.variantsData.variants, function (index, item) {
                 let $newCell = $(`<td>${item.model}</td>`)
                     .addClass(`lb-col-${index+1}`)
                     .addClass(`${item.sku}`);
+
                 $newRow.append($newCell);
                 console.log($newCell.attr('class'));
 
+                //dodawanie komórek w modelu
+                dataObj.tableData.titleRow.AddCell(item.sku, item.model);
             });
 
             $table.append($newRow);
         } else {
+            //produkt regularny
             let $newRow = $(`<tr></tr>`).addClass('lb-row-0');
             $newRow.append($(`<td>${dataObj.tableData.titleRow.Title}</td>`)
                 .addClass('lb-col-0'));
+
             $newRow.append($(`<td>${dataObj.tableData.titleRow.Data[0].value}</td>`)
                 .addClass('lb-col-1')
                 .addClass(`${dataObj.tableData.titleRow.Data[0].sku}`));
+
             $table.append($newRow);
         }
         $('.TableDock').append($table);
     }
 
+    //dodawanie nowego wiersza do widoku jak i do modelu
     let $newRow = $('<tr></tr>')
         .addClass(`lb-row-${dataObj.tableData.rows.length + 1}`);
 
+    //dodanie komórki od nazwy parametru
     $newRow.append($('<td></td>')
         .addClass(`lb-col-0`)
         .append($('<input class="TableInput" type="text">')));
+
     if (dataObj.hasVariants) {
+        //produkt z wariantami
         $.each(dataObj.variantsData.variants, function (index, item) {
+            //dadawanie widoku dla każdej komórki
             let $newCell = $('<td></td>')
                 .addClass(`lb-col-${index+1}`)
                 .append($('<input class="TableInput" type="text">'));
             $newRow.append($newCell);
         });
+        //dodawanie do modelu komórek na podstawie wariantów
+        dataObj.tableData.AddRow(dataObj.variantsData.variants);
     } else {
         $newRow.append($('<td></td>')
             .addClass(`lb-col-1`)
             .append($('<input class="TableInput" type="text">')));
+        //dodanie do modelu wiersza i tu się dowiedziałem że nie ma w js czegoś takiego jak przeładowanie funkcji
+        dataObj.tableData.AddRow([new Variant('', 'all')]);
     }
+    $newRow.hide();
     $table.append($newRow);
+    $newRow.show(150);
 
 
 }
