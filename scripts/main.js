@@ -13,56 +13,55 @@ class DataObject {
 
 class Table {
     constructor(isRegular = true) {
-        if(isRegular){
-            this.titleRow = new TableRow('Parametr',[new TableCell('all','Wartość')]);
-        }
-        else{
-            this.titleRow = new TableRow('Model',[]);
+        if (isRegular) {
+            this.titleRow = new TableRow('Parametr', [new TableCell('all', 'Wartość')]);
+        } else {
+            this.titleRow = new TableRow('Model', []);
         }
         this.rows = []
     }
 
-    AddRow(title =  '', rowData = []){
-        this.rows[this.rows.length] = new TableRow(title,rowData)
+    AddRow(title = '', rowData = []) {
+        this.rows[this.rows.length] = new TableRow(title, rowData)
     }
 
-    RemoveRow(index){
-        this.rows.splice(index,1);
+    RemoveRow(index) {
+        this.rows.splice(index, 1);
     }
 
-    AddColumn(sku){
-        this.titleRow.rowData[this.titleRow.rowData.length] = sku;
-        for(row in this.rows){
-            row.rowData[row.rowData.length] = '';
+    AddColumn(sku) {
+        this.titleRow.Data[this.titleRow.Data.length] = sku;
+        for (row in this.rows) {
+            row.Data[row.Data.length] = '';
         }
     }
 
-    RemoveColumn(sku){
-        let id = this.titleRow.rowData.indexOf(sku);
-        this.titleRow.rowData.splice(id,1);
-        for(row in this.rows){
-            row.rowData.splice(id,1);
+    RemoveColumn(sku) {
+        let id = this.titleRow.Data.indexOf(sku);
+        this.titleRow.Data.splice(id, 1);
+        for (row in this.rows) {
+            row.rowData.splice(id, 1);
         }
     }
 }
 
-class TableRow{
-    constructor(title = '',rowData = []){
-        this.rowTitle = title;
-        this.rowData = rowData;
+class TableRow {
+    constructor(title = '', rowData = []) {
+        this.Title = title;
+        this.Data = rowData;
     }
 
-    AddCell(sku = 'all', value =''){
-        this.rowData[this.rowData.length] = new TableCell(sku,value);
+    AddCell(sku = 'all', value = '') {
+        this.Data[this.Data.length] = new TableCell(sku, value);
     }
 
-    RemoveCell(index){
-        this.rowData.splice(index,1);
+    RemoveCell(index) {
+        this.Data.splice(index, 1);
     }
 }
 
-class TableCell{
-    constructor(sku,value){
+class TableCell {
+    constructor(sku, value) {
         this.sku = sku;
         this.value = value;
     }
@@ -156,6 +155,7 @@ $(document).ready(function () {
     $('.New').on('click', OnAddNewParagraph);
     $('.AddParameterTable').on('click', OnAddTable);
     $('.RemoveParameterTable').on('click', OnRemoveTable);
+    $('.NewParameter').on('click', OnAddTableRow);
 })
 
 //#region STATES
@@ -193,6 +193,7 @@ function VariantTypeState() {
     $('.Table').hide(150);
     $('.WantTable').show(150);
     $('.HaveTable').hide(150);
+    $('.TableDock').hide(150);
     $('.SelectType').attr('disabled', 'true');
 
 }
@@ -246,8 +247,8 @@ function OnAddNewVariant() {
     $('.Table').show(150);
     $('.WantTable').show(150);
 
+    //pojawienie się nowego warianów w opcjach dodanie do paragrafów
     let $toModify = $('.Paragraph').find('.VariantRow').find('ul');
-
     $.each($toModify, (index, item) => {
         let $select = $(item).children().last();
         let $options = $select.find('option');
@@ -390,8 +391,9 @@ function OnAddNewParagraph() {
     }
 
     let $newP = $('<div></div>')
-        // .addClass('Paragraph')
-        .addClass(`lb-p-${dataObj.paragraphData.paragraphsCounter}`);
+        .addClass('Paragraph')
+        .addClass(`lb-p-${dataObj.paragraphData.paragraphsCounter}`)
+
 
     $newDR.append($newTa).append('\n').append($newDb);
     $newP.append($newVR).append('\n').append($newDR);
@@ -408,6 +410,8 @@ function OnAddNewParagraph() {
 
 function OnRemoveParagraph() {
     $p = $(this).parents('.Paragraph');
+    console.log($p);
+    
     let classes = $p.attr('class').split(' ');
     let result = classes.find((item) => /lb-/.test(item));
     let index = ExtractId(result, 'lb-p-');
@@ -500,18 +504,17 @@ function OnAddTable() {
     $(this).hide(150);
 
     dataObj.hasTable = true;
-    if(dataObj.hasVariants){
+    if (dataObj.hasVariants) {
         dataObj.tableData = new Table(false);
-    }
-    else{
+    } else {
         dataObj.tableData = new Table();
-        for(variant in dataObj.variantsData.variants)
-        {
+        for (variant in dataObj.variantsData.variants) {
             dataObj.tableData.titleRow
         }
     }
+    OnAddTableRow();
     $('.RemoveParameterTable').show(150);
-    $('.TableDock').show(150);
+    $('.TableDock').show(300);
     $('.HaveTable').show(150);
 }
 
@@ -519,7 +522,7 @@ function OnRemoveTable() {
     $(this).hide(150);
     $('.AddParameterTable').disabled = true;
     $('.AddParameterTable').show(150);
-    $('.TableDock').hide(150,function(){
+    $('.TableDock').hide(150, function () {
         dataObj.hasTable = false;
         dataObj.tableData = new Table(!dataObj.hasVariants)
         $('.AddParameterTable').disabled = false;
@@ -527,23 +530,66 @@ function OnRemoveTable() {
     $('.HaveTable').hide(150);
 }
 
-function OnAddTableRow(){
+function OnAddTableRow() {
     let $table = $('.TableDock').find('table');
-    if($table.length == 0)
-    {
-        $table = $('<tabel></table>');
-        if(dataObj.hasVariants){
-            let $newRow = $(`<tr>${dataObj.tableData.titleRow.ti}</tr>`);
-            $newRow.append($(<td><td>'))
-        }
+    console.log('elo1');
 
-        $('.TableDock').append
+    if ($table.length == 0) {
+        $table = $('<table></table>');
+        if (dataObj.hasVariants) {
+            let $newRow = $(`<tr></tr>`).addClass('lb-row-0');
+            let $newCell = $(`<td>${dataObj.tableData.titleRow.Title}</td>`)
+                .addClass('lb-col-0')
+            $newRow.append($newCell);
+            console.log('elo2');
+
+
+            $.each(dataObj.variantsData.variants, function (index, item) {
+                let $newCell = $(`<td>${item.model}</td>`)
+                    .addClass(`lb-col-${index+1}`)
+                    .addClass(`${item.sku}`);
+                $newRow.append($newCell);
+                console.log($newCell.attr('class'));
+
+            });
+
+            $table.append($newRow);
+        } else {
+            let $newRow = $(`<tr></tr>`).addClass('lb-row-0');
+            $newRow.append($(`<td>${dataObj.tableData.titleRow.Title}</td>`)
+                .addClass('lb-col-0'));
+            $newRow.append($(`<td>${dataObj.tableData.titleRow.Data[0].value}</td>`)
+                .addClass('lb-col-1')
+                .addClass(`${dataObj.tableData.titleRow.Data[0].sku}`));
+            $table.append($newRow);
+        }
+        $('.TableDock').append($table);
     }
+
+    let $newRow = $('<tr></tr>')
+        .addClass(`lb-row-${dataObj.tableData.rows.length + 1}`);
+
+    $newRow.append($('<td></td>')
+        .addClass(`lb-col-0`)
+        .append($('<input class="TableInput" type="text">')));
+    if (dataObj.hasVariants) {
+        $.each(dataObj.variantsData.variants, function (index, item) {
+            let $newCell = $('<td></td>')
+                .addClass(`lb-col-${index+1}`)
+                .append($('<input class="TableInput" type="text">'));
+            $newRow.append($newCell);
+        });
+    } else {
+        $newRow.append($('<td></td>')
+            .addClass(`lb-col-1`)
+            .append($('<input class="TableInput" type="text">')));
+    }
+    $table.append($newRow);
 
 
 }
 
 
-function OnTableInput(){
+function OnTableInput() {
 
 }

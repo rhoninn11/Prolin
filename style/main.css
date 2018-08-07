@@ -300,10 +300,25 @@ body {
       -ms-flex-align: center;
           align-items: center;
   margin: 20px;
+}
+
+.TableDock {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  max-width: 100%;
+  margin: 20px;
   overflow: auto;
 }
 
-.Table table {
+.TableDock table {
   font-family: Verdana, Arial, Helvetica;
   color: #ffffff;
   border: 1px solid #dddddd;
@@ -314,7 +329,7 @@ body {
   border-collapse: collapse;
 }
 
-.Table table tbody {
+.TableDock table tbody {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -324,7 +339,7 @@ body {
           flex-direction: column;
 }
 
-.Table table tbody tr {
+.TableDock table tbody tr {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -334,7 +349,7 @@ body {
           flex-direction: row;
 }
 
-.Table table tbody tr td {
+.TableDock table tbody tr td {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
