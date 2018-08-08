@@ -33,19 +33,20 @@ class Table {
         this.rows.splice(index, 1);
     }
 
-    AddColumn(sku) {
-        this.titleRow.Data[this.titleRow.Data.length] = sku;
-        for (row in this.rows) {
-            row.Data[row.Data.length] = '';
-        }
+    AddColumn(sku = 'all', model = 'generic') {
+        this.titleRow.Data[this.titleRow.Data.length] = new TableCell(sku, model);
+        $.each(this.rows, function (index, item) {
+            item.Data.push(new TableCell(sku, ''));
+        });
     }
 
     RemoveColumn(sku) {
         let id = this.titleRow.Data.indexOf(sku);
+
         this.titleRow.Data.splice(id, 1);
-        for (row in this.rows) {
-            row.rowData.splice(id, 1);
-        }
+        $.each(this.rows, function (index, item) {
+            item.Data.splice(id, 1);
+        });
     }
 }
 
@@ -160,6 +161,7 @@ $(document).ready(function () {
     $('.AddParameterTable').on('click', OnAddTable);
     $('.RemoveParameterTable').on('click', OnRemoveTable);
     $('.NewParameter').on('click', OnAddTableRow);
+    $('.RemoveParameter').on('click', OnRemoveTableRow);
 })
 
 //#region STATES
@@ -270,6 +272,30 @@ function OnAddNewVariant() {
             $select.append($newOption);
         });
     });
+
+    //pojawienie się nowego wariantu w tabli
+    let $toModify1 = $('.TableDock').find('table').find('tr');
+    let $firstRow = $toModify1.first();
+    let $restOfRows = $toModify1.slice(1);
+
+    //dodanie nazwy modelu we wierszu z modelami
+    let $titleRowCell = $('<td></td>').addClass(sku).addClass(`lb-col-${$firstRow.length}`).text(model);
+    $titleRowCell.hide();
+    $firstRow.append($titleRowCell);
+    $titleRowCell.show(150);
+
+    //dodanie miejsca do wprowadanie dla pozostałych paremetrów
+    $.each($restOfRows, function (index, item) {
+        let $imput = $('<input type="text">').addClass('TableInput');
+        let $tableCell = $('<td></td>').addClass(`lb-col-${$(item).find('td').length}`);
+        $tableCell.append($imput);
+        $tableCell.hide();
+        $(item).append($tableCell);
+        $tableCell.show(150);
+    });
+    if(dataObj.hasTable){
+        dataObj.tableData.AddColumn(sku, model);
+    }
 }
 
 function OnRemoveVariant() {
@@ -311,24 +337,20 @@ function OnRemoveVariant() {
                 }
             });
 
+            //szukanie indeksu usuwanego wariantu
             let result = $(ourCell).attr('class').split(' ').find((item) => /lb-/.test(item));
             let indexToRemove = ExtractId(result, 'lb-col-')
-            console.log(indexToRemove);
-            console.log($toModify);
-            
-            
+
+            //czyszczenie modelu z usuwanego wariantu
+            dataObj.tableData.RemoveColumn(sku);
+
+            //czyszczenie kolumny widoku tabeli z usuwanego wariantu
             $.each($toModify, (index1, item1) => {
-                console.log(item1);
-                
+
                 let $cells = $(item1).find('td');
-                let $cellToModify = $cells.splice(+indexToRemove)
-                console.log(indexToRemove);
-                console.log($cells);
-                console.log($cellToModify);
-                
+                let $cellToModify = $cells.splice(+indexToRemove);
+
                 $.each($cellToModify, (index2, item2) => {
-                    console.log(item2);
-                    
                     $(item2).removeClass(`lb-col-${+indexToRemove + index2}`).addClass(`lb-col-${+indexToRemove + index2 - 1}`);
 
                     if (index2 == 0) {
@@ -336,17 +358,12 @@ function OnRemoveVariant() {
                             $(this).remove();
                         });
                     }
-
                 });
             });
         }
-
-
-
-
     }
 
-    //modyfikowanie id kolejnych wariantów aby zachować ciągłość
+    //modyfikowanie id kolejnych wariantów aby zachować ciągłość (w liście)
     let $mainList = $parent.parent().find('li');
     let $toModify = $mainList.slice(+removedElementId + 1);
     $.each($toModify, (index, item) => {
@@ -665,8 +682,25 @@ function OnAddTableRow() {
     $newRow.hide();
     $table.append($newRow);
     $newRow.show(150);
+    
+    $('RemoveParameter').show(150);
 
+}
 
+function OnRemoveTableRow(){
+    if(dataObj.tableData.rows.length<1){
+        $(this).hide(150);
+    }
+
+    let $rows = $('.TableDock').find('table').find('tr');
+    let $last =$rows.last();
+    let rowId = ExtractId($last.attr('class'),'lb-row-');
+
+    dataObj.tableData.RemoveRow(+rowId - 1);
+    $last.hide(150,function () {
+       $(this).remove(); 
+    });
+    
 }
 
 
