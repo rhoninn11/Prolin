@@ -162,6 +162,7 @@ $(document).ready(function () {
     $('.RemoveParameterTable').on('click', OnRemoveTable);
     $('.NewParameter').on('click', OnAddTableRow);
     $('.RemoveParameter').on('click', OnRemoveTableRow);
+    $('.RenderButton').on('click', OnGenerateView);
 })
 
 //#region STATES
@@ -279,21 +280,27 @@ function OnAddNewVariant() {
     let $restOfRows = $toModify1.slice(1);
 
     //dodanie nazwy modelu we wierszu z modelami
-    let $titleRowCell = $('<td></td>').addClass(sku).addClass(`lb-col-${$firstRow.length}`).text(model);
+    let $titleRowCell = $('<td></td>')
+        .addClass(sku)
+        .addClass(`lb-col-${$firstRow.length}`)
+        .text(model);
     $titleRowCell.hide();
     $firstRow.append($titleRowCell);
     $titleRowCell.show(150);
 
     //dodanie miejsca do wprowadanie dla pozostałych paremetrów
     $.each($restOfRows, function (index, item) {
-        let $imput = $('<input type="text">').addClass('TableInput');
-        let $tableCell = $('<td></td>').addClass(`lb-col-${$(item).find('td').length}`);
+        let $imput = $('<input type="text">')
+            .addClass('TableInput')
+            .on('input', OnTableInput);
+        let $tableCell = $('<td></td>')
+            .addClass(`lb-col-${$(item).find('td').length}`);
         $tableCell.append($imput);
         $tableCell.hide();
         $(item).append($tableCell);
         $tableCell.show(150);
     });
-    if(dataObj.hasTable){
+    if (dataObj.hasTable) {
         dataObj.tableData.AddColumn(sku, model);
     }
 }
@@ -495,6 +502,9 @@ function OnRemoveParagraph() {
     $p.hide(150, function () {
         $(this).remove();
         dataObj.paragraphData.RemoveParagraph(index);
+        if(dataObj.paragraphData.paragraphsCounter == 0){
+            dataObj.hasParagrapshs = false;
+        }
 
         $.each($toModify, function (id, item) {
             let classes = $(item).attr('class').split(' ');
@@ -659,51 +669,461 @@ function OnAddTableRow() {
     //dodanie komórki od nazwy parametru
     $newRow.append($('<td></td>')
         .addClass(`lb-col-0`)
-        .append($('<input class="TableInput" type="text">')));
+        .append($('<input type="text">')
+            .addClass('TableInput')
+            .on('input', OnTableInput)));
 
     if (dataObj.hasVariants) {
+
         //produkt z wariantami
         $.each(dataObj.variantsData.variants, function (index, item) {
+
             //dadawanie widoku dla każdej komórki
             let $newCell = $('<td></td>')
                 .addClass(`lb-col-${index+1}`)
-                .append($('<input class="TableInput" type="text">'));
+                .append($('<input type="text">')
+                    .addClass('TableInput')
+                    .on('input', OnTableInput));
             $newRow.append($newCell);
         });
+
         //dodawanie do modelu komórek na podstawie wariantów
         dataObj.tableData.AddRow(dataObj.variantsData.variants);
     } else {
         $newRow.append($('<td></td>')
             .addClass(`lb-col-1`)
-            .append($('<input class="TableInput" type="text">')));
+            .append($('<input type="text">')
+                .addClass('TableInput')
+                .on('input', OnTableInput)));
         //dodanie do modelu wiersza i tu się dowiedziałem że nie ma w js czegoś takiego jak przeładowanie funkcji
         dataObj.tableData.AddRow([new Variant('', 'all')]);
     }
     $newRow.hide();
     $table.append($newRow);
     $newRow.show(150);
-    
+
     $('RemoveParameter').show(150);
 
 }
 
-function OnRemoveTableRow(){
-    if(dataObj.tableData.rows.length<1){
+function OnRemoveTableRow() {
+    if (dataObj.tableData.rows.length < 1) {
         $(this).hide(150);
     }
 
     let $rows = $('.TableDock').find('table').find('tr');
-    let $last =$rows.last();
-    let rowId = ExtractId($last.attr('class'),'lb-row-');
+    let $last = $rows.last();
+    let rowId = ExtractId($last.attr('class'), 'lb-row-');
 
     dataObj.tableData.RemoveRow(+rowId - 1);
-    $last.hide(150,function () {
-       $(this).remove(); 
+    $last.hide(150, function () {
+        $(this).remove();
     });
-    
+
 }
 
-
 function OnTableInput() {
+    let $col = $(this).parents('td');
+    let $row = $(this).parents('tr');
 
+    let rowId = ExtractId($row.attr('class'), 'lb-row-');
+    let colId = ExtractId($col.attr('class'), 'lb-col-');
+    console.log(`zmieniono wartość w komórce: [${rowId},${colId}]`);
+
+    if (colId == 0) {
+        dataObj.tableData.rows[+rowId - 1].Title = $(this).val();
+    } else {
+        dataObj.tableData.rows[+rowId - 1].Data[+colId - 1] = $(this).val();
+    }
+}
+
+function OnGenerateView() {
+    //kontener z widokiem
+    let $view = $('<div></div>')
+        .addClass('view');
+
+    //kontener z htmlem
+    let $htmlveiw = $('<div>')
+        .addClass('htmlview');
+
+    //początek opisu
+    let $descBegin = $('<div></div>')
+        .addClass('DescBegin');
+    let $descLabel = $('<div></div>')
+        .addClass('DescLabel')
+        .append($('<p>Opis</p>'));
+    let $descRest = $('<div></div>')
+        .addClass('DescBotFiller');
+
+
+    let $lbJSON = $('<div>').addClass('lb-data-JSON').attr('style', "display: none;").text(JSON.stringify(dataObj));
+    let str = $('<p>').append($lbJSON).html();
+    $('<p>').text(str).appendTo($htmlveiw);
+
+    $descBegin.append($descLabel)
+        .append($descRest);
+    $view.append($descBegin);
+
+    let $descBody = $('<div></div>')
+        .addClass('DescBody');
+    $descBody.append($('<h3>Opis</h3>'));
+
+    if (dataObj.hasParagrapshs) {
+        //dodawanie paragrafów do widoku
+        $.each(dataObj.paragraphData.paragraphs, function (index, item) {
+            //do widoku opisu
+            let $span = $('<span></span>').text(item.Data);
+            let $hr = $('<hr>');
+            $descBody.append($span)
+                .append($hr);
+
+            //do widoku textu html
+            let $hspan = $('<span>').attr('style', 'font-family: verdana,geneva; font-size: 10pt;').text(item.Data);
+            let $hhr = $('<hr>').attr('style', 'border: none; margin: 15px;');
+            let str = $('<p>').append($hspan).append($hhr).html();
+            $('<p>').text(str).appendTo($htmlveiw);
+        });
+    }
+
+
+    if (dataObj.hasTable) {
+
+        let data = dataObj.tableData;
+        console.log(data);
+
+        //zmienn do określenia ilości tabel
+        let vC = data.titleRow.Data.length;
+        let tC = Math.ceil(vC / 3);
+        let ftC = Math.floor(vC / 3);
+
+        // daodawanie spanu 'Specyfikacja' view
+        let $spec = $('<span></span>')
+            .text('Specyfikacja:')
+            .appendTo($descBody);
+
+        // daodawanie spanu 'Specyfikacja' html
+        let $hspec = $('<span>').attr('style', 'font-family: verdana,geneva; font-size: 10pt;').text('Specyfikacja');
+        let str = $('<p>').append($hspec).html();
+        $('<p>').text(str).appendTo($htmlveiw);
+
+        // tworzenie widoków i htmlów pełnych tabel
+        for (let i = 0; i < ftC; i++) {
+
+            // tabela view
+            let $table = $('<table></table>');
+
+            // tabela html
+            let $htable = $('<table>').addClass('middle').attr('style', 'width: 100%; background-color: #38a4c7;')
+                .attr('border', '1').attr('cellspacing', '0').attr('cellpadding', '5');
+            let $htbody = $('<tbody>');
+
+            // + wiersz tytułowy tylko w nim podawanie są szerokości tabel
+            // pierwsze pole view
+            let $titleRow = $('<tr></tr>');
+            let $rowTitle = $('<td></td>')
+                .attr('width', '28%')
+                .append($(`<strong>${data.titleRow.Title}</strong>`))
+                .appendTo($titleRow);
+
+            // pierwsze pole html
+            let $hcolgroup = $('<colgroup>');
+            let $htitleRow = $('<tr>');
+            $hcolgroup.append($('<col>').attr('width', '28*'));
+
+            let $s1 = $(`<strong>${data.titleRow.Title}</strong>`);
+            let $sp1 = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 10pt;').append($s1)
+            let $p1 = $('<p>').addClass('align_center').append($sp1);
+            let $td1 = $('<td>').addClass('align_center').attr('width', '28%').attr('height', '50').append($p1);
+            $htitleRow.append($td1);
+
+            // + reszta pól
+            for (let j = 0; j < 3; j++) {
+                // view
+                let $rowCell = $('<td></td>')
+                    .attr('width', '24%')
+                    .append($(`<strong>${data.titleRow.Data[i*3 + j].value}</strong>`))
+                    .appendTo($titleRow);
+
+                // html
+                $hcolgroup.append($('<col>').attr('width', '24*'));
+
+                let $sn = $(`<strong>${data.titleRow.Data[i*3 + j].value}</strong>`);
+                let $spn = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 10pt;').append($sn)
+                let $pn = $('<p>').addClass('align_center').append($spn);
+                let $tdn = $('<td>').addClass('align_center').attr('width', '24%').attr('height', '50').append($pn);
+                $htitleRow.append($tdn);
+
+            }
+            // view
+            $titleRow.appendTo($table);
+
+            // html
+            $htitleRow.appendTo($htbody);
+
+            // pozostałe wiersze
+            for (let j = 0; j < data.rows.length; j++) {
+
+                // pierwsze pole view
+                let $regularRow = $('<tr></tr>');
+                let $rowTitle = $('<td></td>')
+                    .append($(`<strong>${data.rows[j].Title}</strong>`))
+                    .appendTo($regularRow);
+
+                // pierwsze pole html
+                let $hregularRow = $('<tr>');
+
+                let $rs1 = $(`<strong>${data.rows[j].Title}</strong>`);
+                let $rsp1 = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 8pt;').append($rs1)
+                let $rp1 = $('<p>').attr('align', 'CENTER').append($rsp1);
+                let $rtd1 = $('<td>').attr('height', '6').append($rp1);
+
+                $hregularRow.append($rtd1);
+
+                // zmienne do określania czy parmetr się nie powtarza aby tworzyć odpowiednio szerokie kolumny
+                let $wider = undefined;
+                let howWide = 0;
+                let wideData = '';
+
+                // operacje dla każdego pozostałego wiersza w tabeli oprócz tytułowego
+                for (let k = 0; k < 3; k++) {
+                    let $rowCell = $('<td></td>')
+                        .append($(`<strong>${data.rows[j].Data[i*3 + k]}</strong>`));
+
+                    // inicjalizacja dla pierwszej pozycji w wierszu
+                    if (howWide == 0) {
+                        $wider = $rowCell;
+                        howWide++;
+                        wideData = data.rows[j].Data[i * 3 + k];
+                    } else {
+                        // sprawdzanie czy element się powiela
+                        if (wideData == data.rows[j].Data[i * 3 + k]) {
+                            howWide++;
+                        } else {
+
+                            // dodawanie komórki html
+                            let $rsn = $(`<strong>${wideData}</strong>`);
+                            let $rspn = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 8pt;').append($rsn)
+                            let $rpn = $('<p>').attr('align', 'CENTER').append($rspn);
+                            let $rtdn = $('<td>').attr('height', '6').attr('colspan', `${howWide}`).append($rpn);
+
+                            $hregularRow.append($rtdn);
+
+                            // dodawanie komórki view
+                            $wider.attr('colspan', `${howWide}`).appendTo($regularRow);
+
+                            // aktualizacja zmiennych
+                            $wider = $rowCell;
+                            howWide = 1;
+                            wideData = data.rows[j].Data[i * 3 + k];
+                        }
+                    }
+                    if (k == 2) {
+                        // dodawanie komórki html
+                        let $rsn = $(`<strong>${wideData}</strong>`);
+                        let $rspn = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 8pt;').append($rsn)
+                        let $rpn = $('<p>').attr('align', 'CENTER').append($rspn);
+                        let $rtdn = $('<td>').attr('height', '6').attr('colspan', `${howWide}`).append($rpn);
+
+                        $hregularRow.append($rtdn);
+
+                        // dodawanie komórki view
+                        $wider.attr('colspan', `${howWide}`).appendTo($regularRow);
+                    }
+                }
+                // umieszczenie wiersza view w tabeli
+                $regularRow.appendTo($table);
+
+                // umieszczenie wiersza html w tabeli
+                $hregularRow.appendTo($htbody);
+            }
+
+            //dodanie tabeli do view
+            $table.appendTo($descBody);
+            $('<hr>').appendTo($descBody);
+
+            //dodanie tabeli do html
+            $hcolgroup.appendTo($htable);
+            $htbody.appendTo($htable);
+
+            let $hhrt = $('<hr>').attr('style', 'border: none; margin: 15px;');
+            let str = $('<p>').append($htable).append($hhrt).html();
+            $('<p>').text(str).appendTo($htmlveiw);
+        }
+
+        //występuje gdy nie ma pojawi się choć jedna niepełna tabela
+        if (tC != ftC) {
+
+            // licza pól oraz wymiary komórek
+            let ile = ftC * 3;
+            let leftCount = data.titleRow.Data.length - ile;
+            //if (ile == 0)
+                //ile++;
+            let dim;
+            if (leftCount == 1) {
+                dim = ['50', '50'];
+            } else if (leftCount == 2) {
+                dim = ['40', '30'];
+            }
+
+            // tabel view
+            let $table = $('<table></table>');
+
+            // tabela html
+            let $htable = $('<table>').addClass('middle').attr('style', 'width: 100%; background-color: #38a4c7;')
+                .attr('border', '1').attr('cellspacing', '0').attr('cellpadding', '5');
+            let $htbody = $('<tbody>');
+
+            // +wiersz tytułowy
+            // pierwsza komórka view
+            let $titleRow = $('<tr></tr>');
+            let $rowTitle = $('<td></td>')
+                .attr('width', `${dim[0]}%`)
+                .append($(`<strong>${data.titleRow.Title}</strong>`))
+                .appendTo($titleRow);
+
+            // pierwsza komórka html
+            let $hcolgroup = $('<colgroup>');
+            let $htitleRow = $('<tr>');
+            $hcolgroup.append($('<col>').attr('width', `${dim[0]}*`));
+
+            let $s1 = $(`<strong>${data.titleRow.Title}</strong>`);
+            let $sp1 = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 10pt;').append($s1)
+            let $p1 = $('<p>').addClass('align_center').append($sp1);
+            let $td1 = $('<td>').addClass('align_center').attr('width', `${dim[0]}%`).attr('height', '50').append($p1);
+            $htitleRow.append($td1);
+
+            // reszta pierwszego wiersza
+            for (let i = 0; i < leftCount; i++) {
+
+                // komórka view
+                let $rowCell = $('<td></td>')
+                    .attr('width', dim[1])
+                    .append($(`<strong>${data.titleRow.Data[ile + i].value}</strong>`))
+                    .appendTo($titleRow);
+                    console.log(ile + i);
+                    
+
+                // komórka html
+                $hcolgroup.append($('<col>').attr('width', `${dim[1]}*`));
+
+                let $sn = $(`<strong>${data.titleRow.Data[ile + i].value}</strong>`);
+                let $spn = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 10pt;').append($sn)
+                let $pn = $('<p>').addClass('align_center').append($spn);
+                let $tdn = $('<td>').addClass('align_center').attr('width', `${dim[1]}%`).attr('height', '50').append($pn);
+                $htitleRow.append($tdn);
+            }
+
+            // dodanie wiersza view do tabeli
+            $titleRow.appendTo($table);
+
+            // dodanie wiersza html do tabeli
+            $htitleRow.appendTo($htbody);
+
+
+
+            // pozostałe wiersze
+            for (let j = 0; j < data.rows.length; j++) {
+
+                //pierwsze pole view
+                let $regularRow = $('<tr></tr>');
+                let $rowTitle = $('<td></td>')
+                    .append($(`<strong>${data.rows[j].Title}</strong>`))
+                    .appendTo($regularRow);
+
+                //pierwsze pole view
+                let $hregularRow = $('<tr>');
+
+                let $rs1 = $(`<strong>${data.rows[j].Title}</strong>`);
+                let $rsp1 = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 8pt;').append($rs1)
+                let $rp1 = $('<p>').attr('align', 'CENTER').append($rsp1);
+                let $rtd1 = $('<td>').attr('height', '6').append($rp1);
+
+                $hregularRow.append($rtd1);
+
+                // zmienne do określania czy parametr się nie powtarza aby tworzyć szersze kolumny
+                let $wider = undefined;
+                let howWide = 0;
+                let wideData = '';
+
+                // pozostałe pola wiersza
+                for (let k = 0; k < leftCount; k++) {
+                    let $rowCell = $('<td></td>')
+                        .append($(`<strong>${data.rows[j].Data[ile + k]}</strong>`));
+                    console.log(ile + k);
+                    
+
+                    if (howWide == 0) {
+                        $wider = $rowCell;
+                        howWide++;
+                        wideData = data.rows[j].Data[ile + k];
+
+
+                    } else {
+
+                        //sprawdzanie czy element się nie powiela
+                        if (wideData == data.rows[j].Data[ile + k]) {
+                            howWide++;
+                            console.log('elo2');
+                        } else {
+
+                            // komórka html
+                            let $rsn = $(`<strong>${wideData}</strong>`);
+                            let $rspn = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 8pt;').append($rsn)
+                            let $rpn = $('<p>').attr('align', 'CENTER').append($rspn);
+                            let $rtdn = $('<td>').attr('height', '6').attr('colspan', `${howWide}`).append($rpn);
+
+                            $hregularRow.append($rtdn);
+
+                            // komórka view
+                            $wider.attr('colspan', `${howWide}`).appendTo($regularRow);
+
+                            // aktualizacja zmiennych
+                            $wider = $rowCell;
+                            howWide = 1;
+                            wideData = data.rows[j].Data[ile + k];
+                        }
+                    }
+                    if (k == leftCount - 1) {
+
+                        // komórka html
+                        let $rsn = $(`<strong>${wideData}</strong>`);
+                        let $rspn = $('<span>').attr('style', 'color: #ffffff; font-family: verdana,geneva; font-size: 8pt;').append($rsn)
+                        let $rpn = $('<p>').attr('align', 'CENTER').append($rspn);
+                        let $rtdn = $('<td>').attr('height', '6').attr('colspan', `${howWide}`).append($rpn);
+
+                        $hregularRow.append($rtdn);
+
+                        // komórka view
+                        $wider.attr('colspan', `${howWide}`).appendTo($regularRow);
+                    }
+                }
+                // umieszczanie wiersza view w tabeli
+                $regularRow.appendTo($table);
+
+                // umieszczenie wiersza html w tabeli
+                $hregularRow.appendTo($htbody);
+
+            }
+
+            //dodanie tabeli do view
+            $table.appendTo($descBody);
+            $('<hr>').appendTo($descBody);
+
+            //dodanie tabeli do html
+            $hcolgroup.appendTo($htable); //gdy jest to jedyna tabela
+            $htbody.appendTo($htable);
+
+            let str = $('<p>').append($htable).html();
+            $('<p>').text(str).appendTo($htmlveiw);
+        }
+    }
+    $descBody.appendTo($view);
+
+
+
+
+    $('.DisplaySection')
+        .empty()
+        .append($view)
+        .append($htmlveiw);
 }

@@ -412,4 +412,17 @@ body {
 .NewVariantBlock span:first-of-type {
   margin-left: 0px;
 }
+
+.RenderButtonDiv {
+  -ms-flex-item-align: center;
+      -ms-grid-row-align: center;
+      align-self: center;
+  margin-bottom: 10px;
+}
+
+.htmlview {
+  margin: 10px;
+  background: #dddddd;
+  padding: 10px;
+}
 /*# sourceMappingURL=main.css.map */
