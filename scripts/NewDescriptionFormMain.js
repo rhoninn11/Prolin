@@ -502,7 +502,7 @@ function OnRemoveParagraph() {
     $p.hide(150, function () {
         $(this).remove();
         dataObj.paragraphData.RemoveParagraph(index);
-        if (dataObj.paragraphData.paragraphsCounter == 0) {
+        if(dataObj.paragraphData.paragraphsCounter == 0){
             dataObj.hasParagrapshs = false;
         }
 
@@ -745,9 +745,6 @@ function OnGenerateView() {
     //kontener z htmlem
     let $htmlveiw = $('<div>')
         .addClass('htmlview');
-    let kontrast = $('<p>').append('<p style="display: none;">kontrast</p>').html();
-    $('<p>').text(kontrast).appendTo($htmlveiw);
-
 
     //początek opisu
     let $descBegin = $('<div></div>')
@@ -960,7 +957,7 @@ function OnGenerateView() {
             let ile = ftC * 3;
             let leftCount = data.titleRow.Data.length - ile;
             //if (ile == 0)
-            //ile++;
+                //ile++;
             let dim;
             if (leftCount == 1) {
                 dim = ['50', '50'];
@@ -1003,8 +1000,8 @@ function OnGenerateView() {
                     .attr('width', dim[1])
                     .append($(`<strong>${data.titleRow.Data[ile + i].value}</strong>`))
                     .appendTo($titleRow);
-                console.log(ile + i);
-
+                    console.log(ile + i);
+                    
 
                 // komórka html
                 $hcolgroup.append($('<col>').attr('width', `${dim[1]}*`));
@@ -1053,7 +1050,7 @@ function OnGenerateView() {
                     let $rowCell = $('<td></td>')
                         .append($(`<strong>${data.rows[j].Data[ile + k]}</strong>`));
                     console.log(ile + k);
-
+                    
 
                     if (howWide == 0) {
                         $wider = $rowCell;
